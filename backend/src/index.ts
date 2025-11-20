@@ -33,7 +33,19 @@ wss.on('connection', (ws:WebSocket)=>{
                     return;
                 }
                sender?.send(JSON.stringify({type:"createAnswer", sdp:message.sdp}))
-
+            case "iceCandidate":
+                if(ws === sender){
+                    receiver?.send(JSON.stringify({
+                        type:'iceCandidate',
+                        candidate:message.candidate
+                    }))
+                }
+                else if(ws === receiver){
+                    sender?.send(JSON.stringify({
+                        type:'iceCandidate',
+                        candidate:message.candidate
+                    }))
+                }
         }
 
     });

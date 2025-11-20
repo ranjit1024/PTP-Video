@@ -1,9 +1,12 @@
 import { useEffect, useRef } from "react";
 export default function Sender() {
   const socketRef = useRef<WebSocket | null>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  let pc = new RTCPeerConnection()
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:8080");
     socketRef.current = socket;
+    
     socketRef.current.onopen = () => {
       if (
         socketRef.current &&
@@ -18,21 +21,39 @@ export default function Sender() {
     };
     socketRef.current.onmessage = (event:any) =>{
       const message = JSON.parse(event.data);
-      console.log(message)
+      console.log(message);
+      if(message.type === 'iceCandidate'){
+       pc.addIceCandidate(message.candidate) 
+      }
+      else if(message.type === 'createAnswer'){
+        pc.setRemoteDescription(message.sdp)
+      }
     }
+    // receiving ice Candidate
+    
   }, []);
   async function sendVideo() {
     
-    const pc = new RTCPeerConnection();
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-  
+    pc = new RTCPeerConnection();
+    pc.onnegotiationneeded = async() =>{
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+          socketRef.current?.send(JSON.stringify({
+              type:"createOffer",
+              sdp:pc.localDescription
+          }))
+      }
+    }
     //sending create offer
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-        socketRef.current?.send(JSON.stringify({
-            type:"createOffer",
-            sdp:pc.localDescription
+    // sending ice candidate
+    pc.onicecandidate =  (event) =>{
+      if(socketRef.current && socketRef.current.readyState === WebSocket.OPEN){
+        socketRef.current.send(JSON.stringify({
+          type:'iceCandidate',
+          candidate:event.candidate
         }))
+      }
     }
   }
   return (
@@ -47,3 +68,5 @@ export default function Sender() {
     </div>
   );
 }
+
+

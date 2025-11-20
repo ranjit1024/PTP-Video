@@ -29,10 +29,24 @@ wss.on('connection', (ws) => {
                 console.log(message);
                 receiver === null || receiver === void 0 ? void 0 : receiver.send(JSON.stringify({ type: "createOffer", sdp: message.sdp }));
             case "createAnswer":
+                "createAnswer";
                 if (ws === sender) {
                     return;
                 }
                 sender === null || sender === void 0 ? void 0 : sender.send(JSON.stringify({ type: "createAnswer", sdp: message.sdp }));
+            case "iceCandidate":
+                if (ws === sender) {
+                    receiver === null || receiver === void 0 ? void 0 : receiver.send(JSON.stringify({
+                        type: 'iceCandidate',
+                        candidate: message.candidate
+                    }));
+                }
+                else if (ws === receiver) {
+                    sender === null || sender === void 0 ? void 0 : sender.send(JSON.stringify({
+                        type: 'iceCandidate',
+                        candidate: message.candidate
+                    }));
+                }
         }
     });
     ws.send(JSON.stringify({
