@@ -1,55 +1,59 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+// Node.js WebSocket Server with Room Logic
 const ws_1 = require("ws");
-// creating wesocket server
 const wss = new ws_1.WebSocketServer({ port: 8080 });
-let sender = null;
-let receiver = null;
+const rooms = new Map();
 wss.on('connection', (ws) => {
-    ws.on('open', (data) => {
-        console.log(data);
-    });
-    ws.on('message', (data) => {
-        const message = JSON.parse(data);
-        console.log(message);
-        // adding for sender
-        switch (message.type) {
-            case "sender":
-                console.log("sender");
-                sender = ws;
+    let currentClient;
+    ws.on('message', (message) => {
+        const data = JSON.parse(message);
+        switch (data.type) {
+            case 'join-room':
+                currentClient = { ws, roomId: data.roomId, userId: data.userId };
+                if (!rooms.has(data.roomId)) {
+                    rooms.set(data.roomId, new Set());
+                }
+                const room = rooms.get(data.roomId);
+                // Notify existing room members about new peer
+                room.forEach(client => {
+                    if (client.userId !== data.userId) {
+                        client.ws.send(JSON.stringify({
+                            type: 'peer-joined',
+                            userId: data.userId
+                        }));
+                    }
+                });
+                room.add(currentClient);
                 break;
-            case "receiver":
-                console.log("receiver");
-                receiver = ws;
+            case 'offer':
+            case 'answer':
+            case 'ice-candidate':
+                // Forward signaling messages to specific peer in the room
+                const targetRoom = rooms.get(currentClient.roomId);
+                if (targetRoom) {
+                    targetRoom.forEach(client => {
+                        if (client.userId === data.targetUserId) {
+                            client.ws.send(JSON.stringify(Object.assign(Object.assign({}, data), { fromUserId: currentClient.userId })));
+                        }
+                    });
+                }
                 break;
-            case "createOffer":
-                if (ws === receiver) {
-                    return;
-                }
-                console.log(message);
-                receiver === null || receiver === void 0 ? void 0 : receiver.send(JSON.stringify({ type: "createOffer", sdp: message.sdp }));
-            case "createAnswer":
-                "createAnswer";
-                if (ws === sender) {
-                    return;
-                }
-                sender === null || sender === void 0 ? void 0 : sender.send(JSON.stringify({ type: "createAnswer", sdp: message.sdp }));
-            case "iceCandidate":
-                if (ws === sender) {
-                    receiver === null || receiver === void 0 ? void 0 : receiver.send(JSON.stringify({
-                        type: 'iceCandidate',
-                        candidate: message.candidate
-                    }));
-                }
-                else if (ws === receiver) {
-                    sender === null || sender === void 0 ? void 0 : sender.send(JSON.stringify({
-                        type: 'iceCandidate',
-                        candidate: message.candidate
-                    }));
-                }
         }
     });
-    ws.send(JSON.stringify({
-        status: 'Connected'
-    }));
+    ws.on('close', () => {
+        if (currentClient) {
+            const room = rooms.get(currentClient.roomId);
+            if (room) {
+                room.delete(currentClient);
+                // Notify others about peer leaving
+                room.forEach(client => {
+                    client.ws.send(JSON.stringify({
+                        type: 'peer-left',
+                        userId: currentClient.userId
+                    }));
+                });
+            }
+        }
+    });
 });

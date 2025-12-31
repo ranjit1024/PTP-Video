@@ -1,55 +1,44 @@
-import {WebSocketServer,WebSocket} from "ws";
-// creating wesocket server
-const wss = new WebSocketServer({port:8080});
-let  sender : WebSocket | null = null;
-let  receiver : WebSocket | null = null;
-wss.on('connection', (ws:WebSocket)=>{
-    ws.on('open', (data:any)=>{
-        console.log(data)
-    })
-    ws.on('message', (data:any)=>{
-        const message = JSON.parse(data);
-        console.log(message)
+// server.ts
+import { WebSocketServer, WebSocket } from 'ws';
+import https from 'https';
 
-        // adding for sender
-        switch(message.type){
-            case "sender":
-                console.log("sender")
-                sender = ws;
-                break;
-            case "receiver":
-                console.log("receiver");
-                receiver = ws;
-                break;
-            case "createOffer":
-                if(ws === receiver){
-                    return;
-                }
-                console.log(message)
-                receiver?.send(JSON.stringify({type:"createOffer", sdp:message.sdp}))
-            case "createAnswer":
-                "createAnswer"
-                if(ws === sender){
-                    return;
-                }
-               sender?.send(JSON.stringify({type:"createAnswer", sdp:message.sdp}))
-            case "iceCandidate":
-                if(ws === sender){
-                    receiver?.send(JSON.stringify({
-                        type:'iceCandidate',
-                        candidate:message.candidate
-                    }))
-                }
-                else if(ws === receiver){
-                    sender?.send(JSON.stringify({
-                        type:'iceCandidate',
-                        candidate:message.candidate
-                    }))
-                }
-        }
+interface SignalMessage {
+  type: 'offer' | 'answer' | 'ice-candidate' | 'join' | 'leave';
+  target?: string;
+  source: string;
+  data?: any;
+}
 
-    });
-    ws.send(JSON.stringify({
-        status:'Connected'
-    }))
-}) 
+interface ClientWebSocket extends WebSocket {
+  userId: string;
+}
+
+const clients = new Map<string, ClientWebSocket>();
+
+const wss = new WebSocketServer({ port: 8080 });
+
+wss.on('connection', (ws: ClientWebSocket, req) => {
+  const userId = new URL(req.url!, 'ws://localhost').searchParams.get('userId');
+  
+  if (!userId) {
+    ws.close();
+    return;
+  }
+
+  ws.userId = userId;
+  clients.set(userId, ws);
+
+  ws.on('message', (data: string) => {
+    const message: SignalMessage = JSON.parse(data.toString());
+    
+    // Route message to target peer
+    if (message.target && clients.has(message.target)) {
+      const targetClient = clients.get(message.target)!;
+      targetClient.send(JSON.stringify(message));
+    }
+  });
+
+  ws.on('close', () => {
+    clients.delete(userId);
+  });
+});

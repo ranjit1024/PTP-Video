@@ -16,7 +16,6 @@ export default function Receiver(){
                 );
             }
         }
-        
         socketRef.current.onmessage = async(event) =>{
             const message = JSON.parse(event.data);
         
