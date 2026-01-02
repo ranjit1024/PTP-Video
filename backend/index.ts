@@ -13,14 +13,15 @@ server.on("connection", (ws: WebSocket) => {
         const msg = JSON.parse(data.toString());
         switch (msg.type) {
             case join:
-                console.log('JOin')
                 if (users.user1 === null) {
+                    console.log("user1")
                     users.user1 = ws;
-                    ws.send(JSON.stringify({user:"user1"}))
+                    users.user1.send(JSON.stringify({user:"user1"}))
                 }
                 else {
+                    console.log("user2")
                     users.user2 = ws;
-                    ws.send(JSON.stringify({user:"user2"}))
+                    users.user2.send(JSON.stringify({user:"user2"}))
                 }
                 break;
             case offer:
