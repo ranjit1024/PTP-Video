@@ -1,4 +1,4 @@
-import { answer, join, offer } from "@/types/types";
+import { answer, ice, join, offer } from "@/types/types";
 import { useEffect, useRef, type RefObject } from "react";
 
 
@@ -42,6 +42,12 @@ export function Sender() {
           pc.setRemoteDescription(msg.sdp)
         }
       }
+    }
+    pc.onicecandidate = (event)=>{
+      socket.current?.send(JSON.stringify({
+        type:ice,
+        candidate:event.candidate
+      }))
     }
     if(videoTrack){
       pc.addTrack(videoTrack,media)
