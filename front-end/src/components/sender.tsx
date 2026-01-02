@@ -1,6 +1,14 @@
-import type { RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
+import { WebSocket } from "ws";
 
 export function Sender(){
+  const wsRef = useRef<WebSocket | null>(null);
+  useEffect(()=>{
+    const ws = new WebSocket("ws://localhost:8080");
+    ws.onopen = () =>{
+      wsRef.current = ws;
+    }
+  },[])
     return <div className="border-2 border-emerald-200 w-full rounded">
          <button onClick={()=>{
           

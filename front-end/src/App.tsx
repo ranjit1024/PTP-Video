@@ -11,14 +11,11 @@ export function App() {
   const localSteram = useRef<MediaStream | null>(null)
   const remoteSteram = useRef<MediaStream | null>(null)
   const localVideo = useRef<HTMLVideoElement | null>(null)
-  useEffect(()=>{
-    
-  },[])
   return (
    
     <div className="flex justify-between w-full gap-10">
-      
-        
+      <Sender/>
+        <Receiver/>
     </div>
    
   );
