@@ -15,13 +15,16 @@ server.on("connection", (ws: WebSocket) => {
             case join:
                 console.log('JOin')
                 if (users.user1 === null) {
-                    users.user1 = ws
+                    users.user1 = ws;
+                    ws.send(JSON.stringify({user:"user1"}))
                 }
                 else {
                     users.user2 = ws;
+                    ws.send(JSON.stringify({user:"user2"}))
                 }
                 break;
             case offer:
+                console.log("offer init")
                 if (users.user1 === ws) {
                     users.user2?.send(JSON.stringify({
                         type: offer,
@@ -36,6 +39,7 @@ server.on("connection", (ws: WebSocket) => {
                 }
                 break;
             case answer:
+                console.log("Anser Init")
                 if (users.user1 === ws) {
                     users.user2?.send(JSON.stringify({
                         type: answer,
@@ -66,7 +70,12 @@ server.on("connection", (ws: WebSocket) => {
         }
 
     })
-
+    ws.on("close",()=>{
+        if(users.user1 && users.user2){
+            users.user1 = null;
+            users.user2 = null
+        }
+    })
     ws.send(JSON.stringify({
         type:"connected"
     }))
