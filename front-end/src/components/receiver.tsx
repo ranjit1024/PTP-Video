@@ -1,4 +1,4 @@
-import { answer, join, offer } from "@/types/types";
+import { answer, ice, join, offer } from "@/types/types";
 import { PureComponent, useEffect, useRef, type RefObject } from "react";
 export function Receiver() {
   const localVideo = useRef<HTMLVideoElement>(null);
@@ -16,6 +16,7 @@ export function Receiver() {
       socket.current.onmessage = async(event) => {
         const pc = new RTCPeerConnection();
         const msg = JSON.parse(event.data);
+        
         if(msg.type === offer){
           console.log("offer")
           pc.setRemoteDescription(msg.sdp);
@@ -36,6 +37,10 @@ export function Receiver() {
           }))
         
         }
+        else if(msg.type === ice){
+          pc.addIceCandidate(msg.candidate)
+        }
+        
       }
       
     }
