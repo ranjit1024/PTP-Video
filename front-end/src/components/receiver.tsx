@@ -13,10 +13,16 @@ export function Receiver() {
         type: 'JOIN'
       }))
 
+      const pc = new RTCPeerConnection();
       socket.current.onmessage = async(event) => {
-        const pc = new RTCPeerConnection();
         const msg = JSON.parse(event.data);
         
+        pc.onicecandidate=(event)=>{
+          ws.send(JSON.stringify({
+            type:ice,
+            candidate:event.candidate
+          }))
+        }   
         if(msg.type === offer){
           console.log("offer")
           pc.setRemoteDescription(msg.sdp);

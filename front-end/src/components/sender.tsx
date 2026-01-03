@@ -41,8 +41,12 @@ export function Sender() {
           console.log("dafdsf")
           pc.setRemoteDescription(msg.sdp)
         }
+        if(msg.type === ice){
+          pc.addIceCandidate(msg.candidate)
+        }
       }
     }
+    
     pc.onicecandidate = (event)=>{
       socket.current?.send(JSON.stringify({
         type:ice,
